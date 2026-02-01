@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FUND HUB // 资产指挥舱</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-deep: #050509;
+            --glass-bg: rgba(22, 22, 35, 0.85); /* 加深背景，防止看不清 */
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --tech-blue: #00f2ea;
+            --neon-purple: #b026ff;
+            --color-up: #ff3366;
+            --color-down: #00ff88;
+            --text-main: #ffffff;
+            --text-sub: #8b9bb4;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            background-image: radial-gradient(circle at 10% 20%, rgba(176, 38, 255, 0.08) 0%, transparent 20%),
+                              radial-gradient(circle at 90% 80%, rgba(0, 242, 234, 0.08) 0%, transparent 20%);
+            color: var(--text-main);
+            font-family: 'Rajdhani', "Microsoft YaHei", sans-serif;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: border-color 0.3s;
+        }
+        .glass-panel:hover { border-color: rgba(255, 255, 255, 0.15); }
+
+        .font-num { font-family: 'JetBrains Mono', monospace; letter-spacing: -0.5px; }
+        .text-blue { color: var(--tech-blue); }
+        .text-purple { color: var(--neon-purple); }
+        .text-up { color: var(--color-up); }
+        .text-down { color: var(--color-down); }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #00f2ea 0%, #b026ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .top-bar { padding: 30px 0; display: flex; justify-content: space-between; align-items: center; }
+
+        .kpi-card { padding: 25px; height: 100%; position: relative; overflow: hidden; }
+        .kpi-title { font-size: 0.9rem; color: var(--text-sub); text-transform: uppercase; margin-bottom: 10px; font-weight: 600; }
+        .kpi-value { font-size: 2.2rem; font-weight: 700; }
+
+        .card-action-icon {
+            position: absolute; top: 15px; right: 15px;
+            color: var(--text-sub); cursor: pointer; opacity: 0.6; transition: 0.3s;
+        }
+        .card-action-icon:hover { opacity: 1; color: var(--tech-blue); }
+
+        .table-container { padding: 20px; }
+        .custom-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+        .custom-table th { color: var(--text-sub); font-size: 0.85rem; padding: 15px; font-weight: 500; border: none; }
+        .custom-table tr.data-row { background: rgba(255, 255, 255, 0.02); }
+        .custom-table tr.data-row:hover { background: rgba(255, 255, 255, 0.05); }
+        .custom-table td { padding: 15px; vertical-align: middle; border: none; }
+        .custom-table td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+        .custom-table td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+        /* 名字过长省略号 */
+        .text-truncate-custom {
+            display: inline-block;
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: bottom;
+        }
+
+        .badge-tech { background: rgba(0, 242, 234, 0.1); color: var(--tech-blue); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
+        .btn-tech { background: transparent; border: 1px solid var(--tech-blue); color: var(--tech-blue); border-radius: 20px; padding: 5px 20px; transition: 0.3s; margin-left: 10px; }
+        .btn-tech:hover { background: var(--tech-blue); color: #000; box-shadow: 0 0 15px var(--tech-blue); cursor: pointer; }
+        .btn-icon-only { padding: 5px 10px; font-size: 0.8rem; border-color: var(--glass-border); color: var(--text-sub); }
+        .btn-icon-only:hover { border-color: var(--tech-blue); color: var(--tech-blue); }
+
+        /* Modal Styles */
+        .modal-content { background-color: #151621; border: 1px solid var(--tech-blue); color: #fff; }
+        .modal-header, .modal-footer { border-color: var(--glass-border); }
+        .form-control { background-color: #0b0c15; border: 1px solid var(--glass-border); color: #fff; }
+        .form-control:focus { background-color: #0b0c15; color: #fff; border-color: var(--tech-blue); box-shadow: 0 0 5px var(--tech-blue); }
+        .list-group-item { background-color: transparent; border-color: var(--glass-border); color: #fff; display: flex; justify-content: space-between; align-items: center; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <div>
+            <h2 class="m-0 gradient-text"><i class="fas fa-cube me-2"></i>资产指挥舱</h2>
+            <small style="color: var(--text-sub)">实时基金估值监控系统</small>
+        </div>
+        <div class="text-end">
+            <button class="btn-tech font-num" onclick="openManageModal()">
+                <i class="fas fa-cog me-2"></i>管理持仓
+            </button>
+            <button onclick="manualRefresh()" class="btn-tech font-num">
+                <i class="fas fa-sync-alt me-2" id="icon-refresh"></i>刷新 (<span id="countdown">30</span>)
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="glass-panel kpi-card">
+                <i class="fas fa-eye card-action-icon privacy-toggle" onclick="togglePrivacy()"></i>
+                <div class="kpi-title"><i class="fas fa-wallet me-2 text-purple"></i>持仓总市值</div>
+                <div class="kpi-value font-num text-white" id="total-market">--</div>
+                <div class="mt-2 text-sub" style="font-size: 0.8rem"><span class="badge-tech">CNY</span> 实时估算</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-panel kpi-card" style="border-bottom: 3px solid var(--tech-blue);">
+                <i class="fas fa-eye card-action-icon privacy-toggle" onclick="togglePrivacy()"></i>
+                <div class="kpi-title"><i class="fas fa-chart-line me-2 text-blue"></i>今日预估收益</div>
+                <div class="kpi-value font-num" id="total-day">--</div>
+                <div class="mt-2" style="font-size: 0.8rem; color: var(--text-sub);">基于实时涨跌幅计算</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-panel kpi-card">
+                <i class="fas fa-eye card-action-icon privacy-toggle" onclick="togglePrivacy()"></i>
+                <div class="kpi-title"><i class="fas fa-piggy-bank me-2 text-purple"></i>历史累计收益</div>
+                <div class="kpi-value font-num" id="total-hold">--</div>
+                <div class="mt-2" style="font-size: 0.8rem; color: var(--text-sub);">包含历史持仓盈亏</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-panel table-container">
+        <h5 class="mb-3 text-white"><i class="fas fa-list-ul me-2 text-blue"></i>持仓明细</h5>
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th width="22%">基金名称</th>
+                    <th width="12%">持有金额</th>
+                    <th width="10%">净值(估)</th>
+                    <th width="10%">涨幅</th>
+                    <th width="12%">今日盈亏</th>
+                    <th width="12%">持有盈亏</th>
+                    <th width="10%">更新时间</th>
+                    <th width="8%" class="text-end">校准</th>
+                </tr>
+            </thead>
+            <tbody id="fund-list"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="manageModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-num"><i class="fas fa-tasks me-2 text-blue"></i>持仓管理</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 border-end border-secondary">
+                        <h6 class="text-sub mb-3"><i class="fas fa-trash-alt me-2"></i>点击右侧X删除</h6>
+                        <ul class="list-group list-group-flush" id="manage-list" style="max-height: 300px; overflow-y: auto;">
+                            </ul>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6 class="text-sub mb-3"><i class="fas fa-plus-circle me-2"></i>录入 / 加减仓</h6>
+                        <form id="addFundForm">
+                            <div class="mb-2">
+                                <label class="form-label small">基金代码</label>
+                                <input type="text" class="form-control font-num" id="inputCode" placeholder="如: 000001" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small">最新持有总金额</label>
+                                <input type="number" step="0.01" class="form-control font-num" id="inputAmount" placeholder="APP显示的最新金额" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">最新持有总盈亏</label>
+                                <input type="number" step="0.01" class="form-control font-num" id="inputProfit" placeholder="APP显示的最新盈亏" required>
+                            </div>
+                            <button type="button" class="btn btn-info w-100" onclick="submitFund()">
+                                <i class="fas fa-check me-2"></i>确认提交
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    let privacyMode = localStorage.getItem('privacy_mode') === 'true';
+    let cachedData = null;
+    let manageModal = null; // 全局 Modal 实例
+
+    // 初始化 Modal
+    $(document).ready(function() {
+        manageModal = new bootstrap.Modal(document.getElementById('manageModal'));
+        fetchData();
+        updatePrivacyIcons();
+    });
+
+    function formatMoney(num) { return parseFloat(num).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function formatSign(num, isPercent=false) {
+        let val = parseFloat(num);
+        let sign = val > 0 ? "+" : "";
+        return sign + val.toFixed(2) + (isPercent ? "%" : "");
+    }
+    function getColor(num) {
+        if (privacyMode) return 'text-white';
+        if (num > 0.001) return 'text-up';
+        if (num < -0.001) return 'text-down';
+        return 'text-sub';
+    }
+    function getText(formattedValue) { return privacyMode ? '****' : formattedValue; }
+
+    // --- 管理功能 ---
+
+    // 打开管理窗口
+    function openManageModal() {
+        $('#inputCode').val('');
+        $('#inputAmount').val('');
+        $('#inputProfit').val('');
+        renderManageList(); // 渲染左侧列表
+        manageModal.show();
+    }
+
+    // 快捷校准：填充右侧表单
+    function quickEdit(code) {
+        // 先打开窗口
+        renderManageList();
+        manageModal.show();
+        // 再填值
+        setTimeout(() => {
+             $('#inputCode').val(code);
+             $('#inputAmount').focus();
+        }, 100);
+    }
+
+    // 渲染管理列表
+    function renderManageList() {
+        let listHtml = '';
+        if (cachedData && cachedData.data) {
+            cachedData.data.forEach(item => {
+                listHtml += `
+                    <li class="list-group-item">
+                        <span class="text-truncate-custom" style="max-width:200px">
+                            <span class="badge-tech font-num me-2">${item.code}</span>
+                            ${item.name}
+                        </span>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteFund('${item.code}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </li>
+                `;
+            });
+        } else {
+            listHtml = '<li class="list-group-item text-muted">暂无持仓</li>';
+        }
+        $('#manage-list').html(listHtml);
+    }
+
+    // 提交数据
+    function submitFund() {
+        let code = $('#inputCode').val();
+        let amount = $('#inputAmount').val();
+        let profit = $('#inputProfit').val();
+
+        if(!code || !amount || !profit) return alert("请填写完整");
+
+        $.ajax({
+            url: '/api/add_fund',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ code: code, amount: amount, profit: profit }),
+            success: function(res) {
+                // 不关闭窗口，只刷新列表，方便连续操作
+                fetchData(() => {
+                    renderManageList();
+                    alert("录入成功");
+                    $('#addFundForm')[0].reset();
+                });
+            }
+        });
+    }
+
+    // 删除基金
+    function deleteFund(code) {
+        if(!confirm('确定删除该基金吗？')) return;
+        $.ajax({
+            url: '/api/delete_fund',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ code: code }),
+            success: function() {
+                fetchData(() => renderManageList());
+            }
+        });
+    }
+
+    // --- 页面渲染 ---
+    function renderPage(res) {
+        let html = '';
+        res.data.forEach(function(item) {
+            let codeBadge = `<span class="badge-tech font-num me-2">${item.code}</span>`;
+            let nameHtml = `${codeBadge}<span class="text-truncate-custom" title="${item.name}">${item.name}</span>`;
+
+            // 新增：数据源标签显示
+            let sourceClass = item.src_tag === 'L2行情' ? 'bg-danger' : (item.src_tag === 'APP估值' ? 'bg-primary' : 'bg-secondary');
+            let sourceBadge = `<span class="badge ${sourceClass} ms-1" style="font-size:0.6em; opacity:0.8">${item.src_tag || '离线'}</span>`;
+
+            if(item.status === 'failed') nameHtml += ' <span class="badge bg-secondary ms-1" style="font-size:0.6em">休市</span>';
+            else nameHtml += sourceBadge; // 添加标签
+
+            let val_gsz = item.gsz.toFixed(4);
+            let val_rate = formatSign(item.gszzl, true);
+            let val_day = getText(formatSign(item.day_profit));
+            let val_total = getText(formatSign(item.total_profit));
+            let val_market = getText(formatMoney(item.market_value));
+
+            html += `
+                <tr class="data-row">
+                    <td>${nameHtml}</td>
+                    <td class="font-num text-white">${val_market}</td>
+                    <td class="font-num text-white">${val_gsz}</td>
+                    <td class="font-num ${getColor(item.gszzl)}">${val_rate}</td>
+                    <td class="font-num ${getColor(item.day_profit)}">${val_day}</td>
+                    <td class="font-num ${getColor(item.total_profit)}">${val_total}</td>
+                    <td class="font-num text-sub" style="font-size:0.8rem">${item.update_time}</td>
+                    <td class="text-end">
+                        <button class="btn btn-tech btn-icon-only" onclick="quickEdit('${item.code}')">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        $('#fund-list').html(html);
+
+        let kpi_day_color = privacyMode ? 'text-white' : getColor(res.summary.total_day_profit);
+        let kpi_hold_color = privacyMode ? 'text-white' : getColor(res.summary.total_hold_profit);
+
+        $('#total-day').html(getText(formatSign(res.summary.total_day_profit))).attr('class', 'kpi-value font-num ' + kpi_day_color);
+        $('#total-hold').html(getText(formatSign(res.summary.total_hold_profit))).attr('class', 'kpi-value font-num ' + kpi_hold_color);
+        let marketText = privacyMode ? '****' : "¥ " + formatMoney(res.summary.total_market_value);
+        $('#total-market').text(marketText);
+
+        updatePrivacyIcons();
+    }
+
+    function togglePrivacy() {
+        privacyMode = !privacyMode;
+        localStorage.setItem('privacy_mode', privacyMode);
+        updatePrivacyIcons();
+        if (cachedData) renderPage(cachedData);
+    }
+
+    function updatePrivacyIcons() {
+        let icons = $('.privacy-toggle');
+        if (privacyMode) {
+            icons.removeClass('fa-eye').addClass('fa-eye-slash').css('color', 'var(--tech-blue)');
+        } else {
+            icons.removeClass('fa-eye-slash').addClass('fa-eye').css('color', 'var(--text-sub)');
+        }
+    }
+
+    function fetchData(callback) {
+        $('#icon-refresh').addClass('fa-spin');
+        $.ajax({
+            url: '/api/valuations',
+            method: 'GET',
+            success: function(res) {
+                cachedData = res;
+                renderPage(res);
+                timer = 30;
+                $('#icon-refresh').removeClass('fa-spin');
+                if (callback) callback();
+            },
+            error: function() { $('#icon-refresh').removeClass('fa-spin'); }
+        });
+    }
+
+    function manualRefresh() {
+        timer = 30; // 重置倒计时
+        fetchData();
+    }
+
+    let timer = 30;
+    setInterval(function() {
+        timer--;
+        if (timer <= 0) fetchData();
+        else $('#countdown').text(timer);
+    }, 1000);
+
+</script>
+
+</body>
+</html>
