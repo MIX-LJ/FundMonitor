@@ -12,7 +12,7 @@
     <style>
         :root {
             --bg-deep: #050509;
-            --glass-bg: rgba(22, 22, 35, 0.85); /* 加深背景，防止看不清 */
+            --glass-bg: rgba(22, 22, 35, 0.85);
             --glass-border: rgba(255, 255, 255, 0.1);
             --tech-blue: #00f2ea;
             --neon-purple: #b026ff;
@@ -76,7 +76,6 @@
         .custom-table td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
         .custom-table td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
 
-        /* 名字过长省略号 */
         .text-truncate-custom {
             display: inline-block;
             max-width: 140px;
@@ -92,7 +91,6 @@
         .btn-icon-only { padding: 5px 10px; font-size: 0.8rem; border-color: var(--glass-border); color: var(--text-sub); }
         .btn-icon-only:hover { border-color: var(--tech-blue); color: var(--tech-blue); }
 
-        /* Modal Styles */
         .modal-content { background-color: #151621; border: 1px solid var(--tech-blue); color: #fff; }
         .modal-header, .modal-footer { border-color: var(--glass-border); }
         .form-control { background-color: #0b0c15; border: 1px solid var(--glass-border); color: #fff; }
@@ -153,6 +151,7 @@
                 <tr>
                     <th width="22%">基金名称</th>
                     <th width="12%">持有金额</th>
+                    <th width="10%">净值</th>
                     <th width="10%">净值(估)</th>
                     <th width="10%">涨幅</th>
                     <th width="12%">今日盈亏</th>
@@ -178,7 +177,7 @@
                     <div class="col-md-6 border-end border-secondary">
                         <h6 class="text-sub mb-3"><i class="fas fa-trash-alt me-2"></i>点击右侧X删除</h6>
                         <ul class="list-group list-group-flush" id="manage-list" style="max-height: 300px; overflow-y: auto;">
-                            </ul>
+                        </ul>
                     </div>
 
                     <div class="col-md-6">
@@ -212,9 +211,8 @@
 <script>
     let privacyMode = localStorage.getItem('privacy_mode') === 'true';
     let cachedData = null;
-    let manageModal = null; // 全局 Modal 实例
+    let manageModal = null;
 
-    // 初始化 Modal
     $(document).ready(function() {
         manageModal = new bootstrap.Modal(document.getElementById('manageModal'));
         fetchData();
@@ -235,30 +233,23 @@
     }
     function getText(formattedValue) { return privacyMode ? '****' : formattedValue; }
 
-    // --- 管理功能 ---
-
-    // 打开管理窗口
     function openManageModal() {
         $('#inputCode').val('');
         $('#inputAmount').val('');
         $('#inputProfit').val('');
-        renderManageList(); // 渲染左侧列表
+        renderManageList();
         manageModal.show();
     }
 
-    // 快捷校准：填充右侧表单
     function quickEdit(code) {
-        // 先打开窗口
         renderManageList();
         manageModal.show();
-        // 再填值
         setTimeout(() => {
              $('#inputCode').val(code);
              $('#inputAmount').focus();
         }, 100);
     }
 
-    // 渲染管理列表
     function renderManageList() {
         let listHtml = '';
         if (cachedData && cachedData.data) {
@@ -281,7 +272,6 @@
         $('#manage-list').html(listHtml);
     }
 
-    // 提交数据
     function submitFund() {
         let code = $('#inputCode').val();
         let amount = $('#inputAmount').val();
@@ -295,7 +285,6 @@
             contentType: 'application/json',
             data: JSON.stringify({ code: code, amount: amount, profit: profit }),
             success: function(res) {
-                // 不关闭窗口，只刷新列表，方便连续操作
                 fetchData(() => {
                     renderManageList();
                     alert("录入成功");
@@ -305,7 +294,6 @@
         });
     }
 
-    // 删除基金
     function deleteFund(code) {
         if(!confirm('确定删除该基金吗？')) return;
         $.ajax({
@@ -319,20 +307,19 @@
         });
     }
 
-    // --- 页面渲染 ---
     function renderPage(res) {
         let html = '';
         res.data.forEach(function(item) {
             let codeBadge = `<span class="badge-tech font-num me-2">${item.code}</span>`;
             let nameHtml = `${codeBadge}<span class="text-truncate-custom" title="${item.name}">${item.name}</span>`;
 
-            // 新增：数据源标签显示
             let sourceClass = item.src_tag === 'L2行情' ? 'bg-danger' : (item.src_tag === 'APP估值' ? 'bg-primary' : 'bg-secondary');
             let sourceBadge = `<span class="badge ${sourceClass} ms-1" style="font-size:0.6em; opacity:0.8">${item.src_tag || '离线'}</span>`;
 
             if(item.status === 'failed') nameHtml += ' <span class="badge bg-secondary ms-1" style="font-size:0.6em">休市</span>';
-            else nameHtml += sourceBadge; // 添加标签
+            else nameHtml += sourceBadge;
 
+            let val_net = item.net_value.toFixed(4);
             let val_gsz = item.gsz.toFixed(4);
             let val_rate = formatSign(item.gszzl, true);
             let val_day = getText(formatSign(item.day_profit));
@@ -343,6 +330,7 @@
                 <tr class="data-row">
                     <td>${nameHtml}</td>
                     <td class="font-num text-white">${val_market}</td>
+                    <td class="font-num text-white">${val_net}</td>
                     <td class="font-num text-white">${val_gsz}</td>
                     <td class="font-num ${getColor(item.gszzl)}">${val_rate}</td>
                     <td class="font-num ${getColor(item.day_profit)}">${val_day}</td>
@@ -402,7 +390,7 @@
     }
 
     function manualRefresh() {
-        timer = 30; // 重置倒计时
+        timer = 30;
         fetchData();
     }
 
